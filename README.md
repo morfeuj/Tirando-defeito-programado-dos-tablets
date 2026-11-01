@@ -6,7 +6,7 @@ Foi desenvolvido, homologado e medido em dois modelos reais da Samsung:
 1. **Samsung Galaxy Tab A8 (`SM-X200`)** — Android 14, One UI 6, chip Unisoc T618 e 3,4 GB de RAM (foco em console de emulação dedicado).
 2. **Samsung Galaxy Tab A 10.1 2019 (`SM-T510`, `gta3xlwifi`)** — Android 11 (`RP1A.200720.012.T510XXS5CVL1`), One UI Core 3.1, chip Exynos 7904 e 2 GB de RAM (foco em uso multimídia mantendo apps de Streaming, Gmail, YouTube e Fotos).
 
-Em qualquer modelo Samsung ou Android, basta abrir o menu interativo [`otimizador_tablet.py`](otimizador_tablet.py) (ou clicar em [`iniciar_otimizador.bat`](iniciar_otimizador.bat)).
+Em qualquer modelo Samsung ou Android, basta dar dois cliques no aplicativo gráfico nativo para Windows [`Otimizador_Tablet_App.bat`](Otimizador_Tablet_App.bat) (que abre a interface visual [`OtimizadorGUI.ps1`](OtimizadorGUI.ps1) sem precisar de Python instalado) ou usar a versão de terminal em Python [`otimizador_tablet.py`](otimizador_tablet.py) ([`iniciar_otimizador.bat`](iniciar_otimizador.bat)).
 
 ## Conteúdo
 
@@ -162,7 +162,8 @@ flowchart LR
 | Caminho | Conteúdo |
 | --- | --- |
 | [`SPEC.md`](SPEC.md) | Especificação técnica completa da arquitetura, categorias de pacotes e benchmarks |
-| [`otimizador_tablet.py`](otimizador_tablet.py) | Ferramenta interativa em Python com menu (8 módulos: ADB, Varredura, Debloat, ART, Benchmark, Rollback, Emulação, Atualização Android) |
+| [`Otimizador_Tablet_App.bat`](Otimizador_Tablet_App.bat) / [`OtimizadorGUI.ps1`](OtimizadorGUI.ps1) | **Aplicativo Gráfico Nativo para Windows (WinForms)** — funciona em qualquer Windows 10/11 **sem precisar de Python** |
+| [`otimizador_tablet.py`](otimizador_tablet.py) | Ferramenta interativa em Python com menu de terminal (8 módulos) |
 | [`iniciar_otimizador.bat`](iniciar_otimizador.bat) | Inicializador rápido para Windows |
 | [`Passo-a-passo-Galaxy-Tab-A-SM-T510.md`](Passo-a-passo-Galaxy-Tab-A-SM-T510.md) | Relatório técnico da otimização do Galaxy Tab A 10.1 (`SM-T510`) e guia de atualização para LineageOS 20/21 |
 | [`Passo-a-passo-Galaxy-Tab-A8.md`](Passo-a-passo-Galaxy-Tab-A8.md) | Passo a passo completo da otimização do Galaxy Tab A8 (`SM-X200`), emuladores, controles e prompts de IA |
