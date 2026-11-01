@@ -1,11 +1,16 @@
-# Tablet Android para jogos retrô
+# Otimização de Tablets Samsung / Android e Console Retrô
 
-Guia e ferramentas para deixar um tablet Android antigo mais leve e transformá-lo em um console de emulação, sem root. O projeto explica por que esses aparelhos ficam lentos, mostra como remover o excesso de software por ADB e configura emuladores de PS1, PS2 e outros consoles. Também traz dois apps que transformam o celular em controle.
+Guia, especificação técnica e ferramenta interativa em Python para deixar tablets Android antigos mais leves, recuperar espaço e memória RAM e transformá-los em centrais multimídia ou consoles de emulação, **sem root**. O projeto explica por que esses aparelhos ficam lentos, automatiza a limpeza de bloatware e a otimização via ADB, auxilia na atualização do Android e configura emuladores de PS1, PS2 e outros consoles, além de dois apps que transformam o celular em controle.
 
-Foi desenvolvido e testado em um **Samsung Galaxy Tab A8 (SM-X200)** com Android 14, One UI 6, chip Unisoc T618 e 3,4 GB de RAM. Em outros modelos, use os [prompts com varredura](#usar-com-um-agente-de-ia) e adapte o que for diferente.
+Foi desenvolvido, homologado e medido em dois modelos reais da Samsung:
+1. **Samsung Galaxy Tab A8 (`SM-X200`)** — Android 14, One UI 6, chip Unisoc T618 e 3,4 GB de RAM (foco em console de emulação dedicado).
+2. **Samsung Galaxy Tab A 10.1 2019 (`SM-T510`, `gta3xlwifi`)** — Android 11 (`RP1A.200720.012.T510XXS5CVL1`), One UI Core 3.1, chip Exynos 7904 e 2 GB de RAM (foco em uso multimídia mantendo apps de Streaming, Gmail, YouTube e Fotos).
+
+Em qualquer modelo Samsung ou Android, basta abrir o menu interativo [`otimizador_tablet.py`](otimizador_tablet.py) (ou clicar em [`iniciar_otimizador.bat`](iniciar_otimizador.bat)).
 
 ## Conteúdo
 
+- [Ferramenta interativa em Python (Menu)](#ferramenta-interativa-em-python-menu)
 - [Resultados medidos](#resultados-medidos)
 - [Por que os tablets ficam lentos](#por-que-os-tablets-ficam-lentos)
 - [O que é obsolescência programada](#o-que-é-obsolescência-programada)
@@ -13,6 +18,7 @@ Foi desenvolvido e testado em um **Samsung Galaxy Tab A8 (SM-X200)** com Android
 - [O que há no repositório](#o-que-há-no-repositório)
 - [Requisitos](#requisitos)
 - [Otimizar o tablet](#otimizar-o-tablet)
+- [Atualizar a versão do Android](#atualizar-a-versão-do-android)
 - [Medir o seu ganho](#medir-o-seu-ganho)
 - [Instalar os emuladores](#instalar-os-emuladores)
 - [Usar o celular como controle](#usar-o-celular-como-controle)
@@ -23,26 +29,60 @@ Foi desenvolvido e testado em um **Samsung Galaxy Tab A8 (SM-X200)** com Android
 - [Fontes](#fontes)
 - [Licença](#licença)
 
+## Ferramenta interativa em Python (Menu)
+
+Para executar todo o processo sem precisar digitar comandos ADB manualmente, dê dois cliques em [`iniciar_otimizador.bat`](iniciar_otimizador.bat) ou rode:
+
+```powershell
+python otimizador_tablet.py
+```
+
+O script verifica e baixa o ADB oficial do Google automaticamente caso não esteja instalado, oferecendo 8 módulos no menu:
+- **`[1]` Conectar ao Tablet:** USB, autorização e ativação automática de **ADB via Wi-Fi**.
+- **`[2]` Diagnóstico e Varredura Completa:** Lê hardware, RAM, armazenamento, animações e bloatware ativo, salvando [`varredura-tablet.txt`](varredura-tablet.txt).
+- **`[3]` Remover Bloatware e Limitadores Samsung:** Remove por categoria (1 a 12) ou em lote seguro, criando backup automático em [`antes.txt`](antes.txt), [`removidos.txt`](removidos.txt) e o script [`restaurar_apps.bat`](restaurar_apps.bat).
+- **`[4]` Otimizações de Sistema:** Desliga animações (escala `0`), limpa caches (`pm trim-caches 999G`) e pré-compila os apps no runtime ART (`speed` / `speed-profile`).
+- **`[5]` Medir Ganho de Desempenho:** Compara RAM disponível, pacotes ativos e tempo médio de abertura de aplicativos antes e depois.
+- **`[6]` Reverter Alterações:** Reinstala pacotes removidos (`cmd package install-existing`) e restaura as animações.
+- **`[7]` Utilitários de Emulação:** Cria as pastas `/sdcard/ROMs/...`, configura o `retroarch.cfg` (32 bits `ra32` e 64 bits `aarch64`) e gera arquivos `.cue` de PS1.
+- **`[8]` Verificar / Iniciar Atualização do Android:** Checa versão atual, Patch de Segurança, CSC, suporte a Project Treble (GSI) e reinicia em Modo Download (Odin) ou Recovery.
+
 ## Resultados medidos
 
-O ganho varia conforme o aparelho e quanto software de fábrica ele tem. Estes foram os números medidos no Tab A8:
+O ganho varia conforme o aparelho e quais aplicativos o usuário decide manter. Estes foram os números reais medidos nos dois modelos homologados:
+
+### 1. Samsung Galaxy Tab A8 (`SM-X200` — Android 14, 3,4 GB RAM)
+*Perfil: Console de emulação dedicado (sem conta Google e sem apps de streaming).*
 
 | Medida | Antes | Depois |
 | --- | --- | --- |
-| Apps ativos | 333 | 267 |
-| RAM livre | cerca de 1,4 GB | cerca de 1,9 GB logo após o processo |
+| Apps ativos | 333 | 267 (-66 ativos / 68 removidos) |
+| RAM livre | cerca de 1,4 GB | cerca de 1,9 GB logo após o processo (~1,7 GB em uso normal) |
 | Animações da interface | ligadas | desligadas |
 | Limitadores de jogos da Samsung | ativos | removidos |
 
-Não houve medição de velocidade geral, como um benchmark antes e depois, então este projeto não promete um percentual fixo de ganho. Para saber quanto o seu tablet melhorou, siga [Medir o seu ganho](#medir-o-seu-ganho).
+### 2. Samsung Galaxy Tab A 10.1 2019 (`SM-T510` — Android 11, 2 GB RAM)
+*Perfil: Uso multimídia e cotidiano (mantendo Netflix, Disney+, Prime Video, Spotify, YouTube, YouTube Kids, Gmail, Google Fotos, Chrome e ChatGPT).*
+
+| Medida | Antes | Depois |
+| --- | --- | --- |
+| Apps ativos | 336 | 271 (**67 pacotes de bloatware removidos**) |
+| Espaço livre interno (`/data`) | 4,0 GB (84% cheio) | **5,2 GB** (79% cheio — **+1,2 GB recuperados**) |
+| Animações da interface | ligadas (`1.0`) | desligadas (`0.0`) |
+| Limitador de jogos (`GOS`) | ativo | removido |
+| Compilação ART | padrão | híbrida (`speed` na UI + `speed-profile` nos apps grandes) |
+| Serviços Samsung no Top 20 de RAM | vários ativos | **nenhum** (100% da RAM dedicada ao sistema e aos apps do usuário) |
+
+Veja o relatório completo do `SM-T510` em [`Passo-a-passo-Galaxy-Tab-A-SM-T510.md`](Passo-a-passo-Galaxy-Tab-A-SM-T510.md) e a especificação técnica em [`SPEC.md`](SPEC.md).
 
 Situação de cada parte:
 
 | Parte | Situação | Evidência |
 | --- | --- | --- |
-| Otimização do tablet | Funciona | Medidas da tabela acima |
+| Otimização do tablet (`SM-X200` e `SM-T510`) | Funciona | Medidas das tabelas acima |
+| Otimizador Interativo em Python (`otimizador_tablet.py`) | Funciona | Testado e validado via ADB no `SM-T510` (`RX2N7010CWF`) |
 | RetroArch (PS1 e outros) | Funciona | Resident Evil 3 abriu no PCSX-ReARMed; os demais núcleos foram instalados, mas nem todos testados com jogo |
-| PS2 (ARMSX2) | Funciona no jogo testado | GTA III a cerca de 30 FPS e 100% de velocidade em um teste de cerca de 8 minutos |
+| PS2 (ARMSX2 — apenas tablets 64 bits como Tab A8) | Funciona no jogo testado | GTA III a cerca de 30 FPS e 100% de velocidade em um teste de cerca de 8 minutos |
 | BTPad (controle Bluetooth) | Funciona | O tablet recebeu botões, setas e analógico de um POCO X5 Pro 5G |
 | Tela de configuração do BTPad | Testada só no tablet | Falta confirmar no celular |
 | Dois celulares ao mesmo tempo | Não testado | |
@@ -58,7 +98,7 @@ Um tablet raramente fica lento por um único motivo. O hardware continua o mesmo
 | Apps de fábrica e em segundo plano | Serviços que você não usa ocupam RAM e processador, e o Android precisa fechar outros apps com mais frequência | Sim: remove os que você não usa |
 | Apps e sistema mais pesados | Cada atualização é pensada para aparelhos mais novos, e o hardware antigo não acompanha | Em parte: reduz o que roda junto |
 | Armazenamento cheio e fragmentado | Ler e gravar pode demorar mais, o que atrasa a abertura de apps | Em parte: limpa caches e libera espaço |
-| Compilação sob demanda | Parte do código dos apps é interpretada ou compilada enquanto roda | Sim: pré-compila os apps |
+| Compilação sob demanda | Parte do código dos apps é interpretada ou compilada enquanto roda | Sim: pré-compila os apps (`speed` / `speed-profile`) |
 | Bateria envelhecida | A bateria perde capacidade, e alguns aparelhos reduzem o desempenho para evitar desligamentos | Não: exige trocar a bateria |
 | Calor | O chip reduz a velocidade para não superaquecer | Não: o resfriamento continua igual |
 | Limite do hardware | O processador, a memória e os gráficos são os mesmos de fábrica | Não: nenhum software muda isso |
@@ -74,31 +114,35 @@ Provar a intenção é difícil, mas já houve casos com consequências reais:
 - **Itália, 2018:** o órgão regulador [multou a Apple em 10 milhões de euros e a Samsung em 5 milhões](https://mobilesyrup.com/2018/10/24/apple-samsung-fined-italy-slowing-down-phones/). Segundo a decisão, atualizações reduziram o desempenho de celulares e aceleraram sua troca. No caso da Samsung, o alvo foi uma atualização para o Galaxy Note 4. A Samsung disse que recorreria.
 - **Estados Unidos, 2020:** a Apple [aceitou pagar até 500 milhões de dólares](https://www.fox29.com/news/apple-could-pay-up-to-500m-over-battery-related-phone-slowdown) para encerrar processos sobre a lentidão de iPhones antigos. A empresa não admitiu irregularidade. Ela já havia reconhecido que limitava o desempenho de aparelhos com bateria desgastada, para evitar desligamentos.
 
-**O que isso significa para o seu tablet:** esses casos mostram que atualizações podem deixar aparelhos antigos mais lentos, e que nem sempre o consumidor é avisado. Mas eles não provam que o seu modelo foi feito para ficar lento, e este projeto não encontrou evidência disso no Tab A8. Na prática, a lentidão costuma vir da soma das causas da seção anterior, com ou sem intenção do fabricante.
+**O que isso significa para o seu tablet:** esses casos mostram que atualizações podem deixar aparelhos antigos mais lentos, e que nem sempre o consumidor é avisado. Mas eles não provam que o seu modelo foi feito para ficar lento, e este projeto não encontrou evidência disso no Tab A8 nem no Tab A 10.1 (`SM-T510`). Na prática, a lentidão costuma vir da soma das causas da seção anterior, com ou sem intenção do fabricante.
 
 O importante é que boa parte do problema é software, e software pode ser removido. Por isso, um aparelho que parece ultrapassado às vezes ainda tem muitos anos de uso pela frente.
 
 ## Como o projeto funciona
 
-O projeto tem três partes, que podem ser usadas separadamente.
+O projeto tem quatro partes, que podem ser usadas separadamente.
 
-### 1. Otimização por ADB
+### 1. Otimização por ADB (Manual ou via `otimizador_tablet.py`)
 
 O ADB é a ferramenta oficial do Android para controlar um aparelho pelo computador. Com ele, cada mudança é feita sem root e sem desbloquear o sistema.
 
-- **Remoção de apps:** `pm uninstall --user 0` retira o app do usuário atual, mas mantém a cópia original no sistema. Sem o app ativo, seus serviços não rodam e a RAM fica livre. Como a cópia continua lá, é possível reinstalar. Por outro lado, esse comando quase não libera espaço interno, e uma atualização do sistema pode trazer o app de volta.
+- **Remoção de apps:** `pm uninstall --user 0` retira o app do usuário atual, mas mantém a cópia original no sistema. Sem o app ativo, seus serviços não rodam e a RAM fica livre. Como a cópia continua lá, é possível reinstalar. Por outro lado, esse comando quase não libera espaço na partição `/system`, e uma atualização do sistema pode trazer o app de volta.
 - **Animações:** cada abertura de tela deixa de esperar a animação terminar. O processador não fica mais rápido, mas a interface responde antes.
-- **Pré-compilação:** normalmente, o Android [compila aos poucos só as partes mais usadas](https://source.android.com/docs/core/runtime/configure) de cada app. O modo `speed` compila tudo com antecedência, o que dá um desempenho mais constante, mas ocupa mais espaço.
-- **Limitadores de jogos:** no Samsung, o Game Optimizing Service e o Smart FPS Adjuster podem controlar o desempenho dos jogos. Removê-los libera o aparelho, mas ele pode esquentar mais.
+- **Pré-compilação:** normalmente, o Android [compila aos poucos só as partes mais usadas](https://source.android.com/docs/core/runtime/configure) de cada app. O modo `speed` compila tudo com antecedência (ótimo para a interface do sistema), enquanto `speed-profile` compila os caminhos quentes economizando espaço em tablets de 32 GB (como o `SM-T510`).
+- **Limitadores de jogos:** no Samsung, o Game Optimizing Service (`com.samsung.android.game.gos`) e o Smart FPS Adjuster podem controlar o desempenho dos jogos. Removê-los libera o aparelho, mas ele pode esquentar mais.
 
-### 2. Emulação
+### 2. Diagnóstico e Atualização de Versão do Android
+
+O módulo `[8]` do [`otimizador_tablet.py`](otimizador_tablet.py) identifica a compilação exata, o binário do bootloader (`Bit/U`), o código de região (`CSC`) e o suporte ao Project Treble (GSI), guiando tanto atualizações oficiais via OTA/Odin quanto migração para Custom ROMs (`LineageOS 20/21` Android 13/14) em modelos cujo suporte oficial já encerrou (como o `SM-T510`).
+
+### 3. Emulação
 
 Um emulador imita o console em software, e por isso exige bem mais do que o jogo original.
 
-- **RetroArch:** é uma interface única para vários emuladores, chamados de núcleos. Cada console tem o seu, e todos usam os mesmos menus e controles.
-- **ARMSX2:** é um emulador dedicado ao PS2, derivado do PCSX2. É bem mais pesado, então o resultado depende muito do chip e do jogo.
+- **RetroArch:** é uma interface única para vários emuladores, chamados de núcleos. Cada console tem o seu, e todos usam os mesmos menus e controles. Use `RetroArch_aarch64.apk` em sistemas de 64 bits (`SM-X200`) e `RetroArch_ra32.apk` em sistemas de 32 bits (`SM-T510` original).
+- **ARMSX2:** é um emulador dedicado ao PS2, derivado do PCSX2. É bem mais pesado e exige sistema de 64 bits (`arm64-v8a`), então o resultado depende muito do chip e do jogo.
 
-### 3. Celular como controle
+### 4. Celular como controle
 
 ```mermaid
 flowchart LR
@@ -117,25 +161,21 @@ flowchart LR
 
 | Caminho | Conteúdo |
 | --- | --- |
-| `gamepad-bt/` | Código do BTPad, controle por Bluetooth (recomendado) |
-| `gamepad-app/` | Código do NetPad, controle por Wi-Fi |
-| `BTPad.apk`, `NetPad.apk` | Apps compilados, assinados com chave de desenvolvimento |
-| `removidos.txt` | Os 68 pacotes removidos do Tab A8 |
-| `armar-wifi-com-usb.bat` | Ativa o ADB sem fio, com o cabo ligado |
-| `conectar-tablet-wifi.bat` | Reconecta o ADB sem cabo |
-| `Tutoriais/Passo-a-passo-Galaxy-Tab-A8.md` | Passo a passo completo da otimização, dos emuladores e dos controles |
-| `Tutoriais/Emulador-PS2-ARMSX2.md` | Guia completo do emulador de PS2 |
-| `Tutoriais/App-de-controle.md` | Para que serve o app, como se comunica com o tablet e o que configurar |
-| `Prompt-1-otimizar-tablet.txt` | Prompt para um agente otimizar qualquer tablet |
-| `Prompt-2-emulador.txt` | Prompt para um agente instalar RetroArch, jogos e controles |
-| `Prompt-3-emulador-ps2.txt` | Prompt para um agente instalar o emulador de PS2 |
-
-Os guias também têm versão em PDF na pasta `Tutoriais`. Os dois scripts `.bat` usam o IP `192.168.0.5`, então troque pelo IP do seu tablet na linha `set IP=`.
+| [`SPEC.md`](SPEC.md) | Especificação técnica completa da arquitetura, categorias de pacotes e benchmarks |
+| [`otimizador_tablet.py`](otimizador_tablet.py) | Ferramenta interativa em Python com menu (8 módulos: ADB, Varredura, Debloat, ART, Benchmark, Rollback, Emulação, Atualização Android) |
+| [`iniciar_otimizador.bat`](iniciar_otimizador.bat) | Inicializador rápido para Windows |
+| [`Passo-a-passo-Galaxy-Tab-A-SM-T510.md`](Passo-a-passo-Galaxy-Tab-A-SM-T510.md) | Relatório técnico da otimização do Galaxy Tab A 10.1 (`SM-T510`) e guia de atualização para LineageOS 20/21 |
+| [`Passo-a-passo-Galaxy-Tab-A8.md`](Passo-a-passo-Galaxy-Tab-A8.md) | Passo a passo completo da otimização do Galaxy Tab A8 (`SM-X200`), emuladores, controles e prompts de IA |
+| [`Passo-a-passo-Galaxy-Tab-A8.pdf`](Passo-a-passo-Galaxy-Tab-A8.pdf) / [`.docx`](Passo-a-passo-Galaxy-Tab-A8.docx) | Versões em PDF e Word do guia do Tab A8 |
+| [`app-controle-codigo.rar`](app-controle-codigo.rar) | Arquivo compactado com o código-fonte do **BTPad** (`gamepad-bt/`) e **NetPad** (`gamepad-app/`) + scripts `build.ps1` |
+| [`varredura-tablet.txt`](varredura-tablet.txt) | Último laudo de varredura gerado pelo otimizador (`SM-T510`) |
+| [`antes.txt`](antes.txt) / [`removidos.txt`](removidos.txt) | Backup da lista original de pacotes e lista dos 67 pacotes removidos no `SM-T510` |
+| [`restaurar_apps.bat`](restaurar_apps.bat) | Script gerado automaticamente para reinstalar os pacotes removidos |
 
 ## Requisitos
 
 - Tablet Android com Depuração USB ligada.
-- Computador com [ADB](https://dl.google.com/android/repository/platform-tools-latest-windows.zip). Os scripts do projeto são para Windows.
+- Computador com Windows e Python 3.10+ (o próprio [`otimizador_tablet.py`](otimizador_tablet.py) baixa o [ADB oficial](https://dl.google.com/android/repository/platform-tools-latest-windows.zip) automaticamente se não estiver instalado).
 - Cabo USB de dados.
 - Para o BTPad: celular com Android 9 ou superior.
 - Para o PS2: tablet de 64 bits. O [ARMSX2 recomenda](https://armsx2.net/docs/system-requirements) 6 GB de RAM e um chip de alto desempenho.
@@ -143,7 +183,9 @@ Os guias também têm versão em PDF na pasta `Tutoriais`. Os dois scripts `.bat
 
 ## Otimizar o tablet
 
-As mudanças não exigem root e podem ser revertidas. Leia a lista antes de remover qualquer coisa: ela foi feita para um Tab A8 sem chip e sem conta Google, e pode não servir para o seu caso.
+A forma recomendada é abrir o [`iniciar_otimizador.bat`](iniciar_otimizador.bat) e usar as opções `[2]` (Varredura), `[3]` (Remover Bloatware por Categoria) e `[4]` (Otimizações de Sistema).
+
+Se preferir rodar os comandos manualmente no terminal:
 
 ```bash
 # Guarde a lista atual de apps
@@ -157,9 +199,9 @@ adb shell settings put global window_animation_scale 0
 adb shell settings put global transition_animation_scale 0
 adb shell settings put global animator_duration_scale 0
 
-# Limpe os caches e pré-compile os apps (pode levar vários minutos)
+# Limpe os caches e pré-compile os apps
 adb shell pm trim-caches 999G
-adb shell cmd package compile -m speed -f -a
+adb shell cmd package compile -m speed-profile -f -a
 
 adb reboot
 ```
@@ -175,9 +217,19 @@ adb shell settings put global animator_duration_scale 1
 
 Não remova a loja de apps, o único navegador, o único teclado nem o Google Play Services. Se `adb devices` vier vazio em um Samsung, ligue a **Ancoragem USB**: foi o que fez o ADB aparecer no Tab A8.
 
+## Atualizar a versão do Android
+
+Use a opção **`[8]`** do [`otimizador_tablet.py`](otimizador_tablet.py) para verificar a versão de compilação, o binário do bootloader e o suporte a Project Treble do seu tablet:
+
+1. **Atualização Oficial (OTA ou Odin):**
+   - **Galaxy Tab A8 (`SM-X200`):** Vai oficialmente até o **Android 14 (One UI 6.0)**.
+   - **Galaxy Tab A 10.1 (`SM-T510`):** Vai oficialmente até o **Android 11 (One UI Core 3.1 — compilação `T510XXS5CVL1` / Binário 5)**.
+2. **Atualização via Custom ROM (`LineageOS 20 / 21` — Android 13 / 14):**
+   - Para aparelhos que já atingiram o teto oficial da Samsung (como o `SM-T510` no Android 11), veja a seção 4 de [`Passo-a-passo-Galaxy-Tab-A-SM-T510.md`](Passo-a-passo-Galaxy-Tab-A-SM-T510.md) com o passo a passo de desbloqueio de Bootloader, Odin, TWRP e LineageOS.
+
 ## Medir o seu ganho
 
-Meça **antes** de mudar qualquer coisa, repita depois de reiniciar e compare. Faça cada medida três vezes, com o tablet parado há dois minutos.
+Você pode usar a opção **`[5]`** do [`otimizador_tablet.py`](otimizador_tablet.py) ou medir manualmente **antes** de mudar qualquer coisa e repetir depois de reiniciar:
 
 ```bash
 # RAM livre
@@ -191,18 +243,18 @@ adb shell am force-stop com.android.settings
 adb shell am start -W -n com.android.settings/.Settings
 ```
 
-Use o mesmo app nas duas medições e calcule assim: `ganho (%) = (tempo antes - tempo depois) / tempo depois x 100`. Por exemplo, se a abertura caiu de 1.000 ms para 800 ms, o app abre 25% mais rápido. Um benchmark instalado antes e depois também ajuda, desde que seja o mesmo app e a mesma versão.
-
-Se você medir, compartilhe o resultado com o modelo do aparelho. Assim, o projeto passa a ter números reais de mais tablets.
+Use o mesmo app nas duas medições e calcule assim: `ganho (%) = (tempo antes - tempo depois) / tempo depois x 100`.
 
 ## Instalar os emuladores
 
 ### RetroArch
 
-1. Baixe a versão para o seu processador em [buildbot.libretro.com/stable](https://buildbot.libretro.com/stable/). No Tab A8, foi usado o `RetroArch_aarch64.apk` da versão 1.22.2.
+1. Baixe a versão para o seu processador em [buildbot.libretro.com/stable](https://buildbot.libretro.com/stable/):
+   - Sistemas de 64 bits (`SM-X200`): `RetroArch_aarch64.apk`.
+   - Sistemas de 32 bits (`SM-T510` com ROM original): `RetroArch_ra32.apk`.
 2. Instale o APK e aceite o acesso aos arquivos.
 3. Em **Atualizador Online > Baixar Núcleo**, baixe os núcleos da tabela abaixo.
-4. Em **Configurações > Entrada > Teclas de atalho**, ajuste o menu para **Manter pressionado Start (2 segundos)**.
+4. Em **Configurações > Entrada > Teclas de atalho**, ajuste o menu para **Manter pressionado Start (2 segundos)** (ou use a opção `[7] -> [2]` do [`otimizador_tablet.py`](otimizador_tablet.py)).
 5. Só depois, no Menu Rápido de um jogo, desligue **Overlay na tela > Exibir Overlay**. Na ordem inversa, o menu fica inacessível.
 6. Grave em **Menu principal > Arquivo de Configuração > Salvar configuração atual**. Fechar o app à força não salva nada.
 
@@ -217,19 +269,11 @@ Se você medir, compartilhe o resultado com o modelo do aparelho. Assim, o proje
 | Game Boy Advance | mGBA | `/sdcard/ROMs/gba` |
 | Mega Drive, Master System e Game Gear | Genesis Plus GX | `/sdcard/ROMs/megadrive`, `/sdcard/ROMs/mastersystem`, `/sdcard/ROMs/gamegear` |
 
-Jogos de PS1 precisam da imagem e de um `.cue`. Se o tamanho da imagem for divisível por 2352 e não houver `.cue`, crie um com o mesmo nome:
-
-```text
-FILE "Nome do jogo.bin" BINARY
-  TRACK 01 MODE2/2352
-    INDEX 01 00:00:00
-```
+Jogos de PS1 precisam da imagem e de um `.cue` (a opção `[7] -> [3]` do [`otimizador_tablet.py`](otimizador_tablet.py) gera o `.cue` automaticamente).
 
 ### ARMSX2 (PS2)
 
-O guia completo está em [`Tutoriais/Emulador-PS2-ARMSX2.md`](Tutoriais/Emulador-PS2-ARMSX2.md). O resumo é:
-
-1. Baixe a versão adequada em [ARMSX2/ARMSX2](https://github.com/ARMSX2/ARMSX2/releases). No Tab A8, com Android 14, foi usado o `ARMSX2-2.9.1-a13-armv8.2-sdk33.apk`.
+1. Baixe a versão adequada em [ARMSX2/ARMSX2](https://github.com/ARMSX2/ARMSX2/releases). No Tab A8, com Android 14 (64 bits), foi usado o `ARMSX2-2.9.1-a13-armv8.2-sdk33.apk`.
 2. Coloque seus arquivos no tablet, por exemplo em `/sdcard/ROMs/_BIOS/ps2` e `/sdcard/ROMs/ps2`.
 3. Abra o app e indique as duas pastas na configuração inicial.
 4. Ligue o **Ajuste automático de desempenho**, útil em tablets mais fracos.
@@ -242,13 +286,9 @@ Resultado no Tab A8, com o GTA III em resolução nativa:
 | Dirigindo | 29,64 | 102% | 77% |
 | Dirigindo em Chinatown | 29,95 | não registrada | 85% |
 
-Com a CPU emulada em 85%, sobra pouca folga, então cenas mais cheias podem ter quedas. O teste durou cerca de 8 minutos e vale só para esse jogo. Outros jogos podem rodar pior.
-
-A BIOS não faz parte deste projeto. O ARMSX2 pede uma cópia extraída de um PS2 seu.
-
 ## Usar o celular como controle
 
-O app transforma o celular em controle para jogar no tablet. Há duas versões, e os dois APKs são instalados só no **celular**. A explicação completa, com o funcionamento e a configuração, está em [`Tutoriais/App-de-controle.md`](Tutoriais/App-de-controle.md).
+O app transforma o celular em controle para jogar no tablet. Há duas versões dentro de [`app-controle-codigo.rar`](app-controle-codigo.rar), e os dois APKs são instalados só no **celular**.
 
 | | BTPad (recomendado) | NetPad |
 | --- | --- | --- |
@@ -258,8 +298,6 @@ O app transforma o celular em controle para jogar no tablet. Há duas versões, 
 
 ### BTPad (Bluetooth)
 
-**Primeira vez:**
-
 1. Copie o `BTPad.apk` para o **celular**, instale e abra. O celular precisa de Android 9 ou superior.
 2. Permita o Bluetooth, que em muitos aparelhos aparece como Dispositivos próximos.
 3. Toque em **Config > Tornar visível pra parear**. O celular fica visível por 5 minutos.
@@ -268,42 +306,7 @@ O app transforma o celular em controle para jogar no tablet. Há duas versões, 
 6. O app conecta sozinho. Se não conectar, toque em **CONECTAR**.
 7. Confira se o status mostra **CONECTADO** em verde.
 
-**Nas próximas vezes:** abra o app e espere conectar. Não é preciso parear de novo.
-
-**Durante o jogo:** mantenha o BTPad aberto na tela do celular. Em segundo plano, o Android desliga o modo controle.
-
-**Dois jogadores:** repita os passos no segundo celular. Esse caso ainda não foi testado.
-
 > **Nunca dê permissão de Bluetooth ao BTPad no tablet.** Ele passaria a agir como controle, desligaria a recepção de controles do tablet e se conectaria ao celular ao contrário.
-
-O menu **Config** oferece:
-
-| Opção | O que faz |
-| --- | --- |
-| Direcional | Mostra setas, analógico ou os dois. O analógico também aciona as setas |
-| Setas | 4 direções evita apertar duas setas sem querer; 8 direções permite diagonais |
-| Trava de L1 L2 R1 R2 | Define como os botões de cima travam |
-| Trava de ✕ ○ □ △ | Define como os botões de ação travam |
-| Tempo pra travar | 1, 2 ou 3 segundos, no modo Segurar |
-| Mostrar diagnóstico | Exibe o contador de envios e o log da conexão |
-| Mudar posições | Permite arrastar cada controle. Use Salvar, Padrão ou Sair |
-| Tornar visível pra parear | Deixa o celular visível para um novo pareamento |
-
-Os modos de trava são: **Sem trava**, que age como um botão normal; **Segurar**, que trava depois do tempo escolhido e solta com dois toques; e **Liga/desliga**, que alterna a cada toque.
-
-O BTPad foi validado com o sistema do tablet, mas ainda não dentro do ARMSX2.
-
-<details>
-<summary>Detalhes técnicos do BTPad</summary>
-
-- API: `BluetoothHidDevice`, Android 9 ou superior.
-- Relatório HID: ID 1, com 5 bytes (`botões baixo`, `botões alto`, `hat`, `X`, `Y`).
-- Botões: ✕=0, ○=1, □=3, △=4, L1=6, R1=7, L2=8, R2=9, Select=10, Start=11.
-- Hat: 0 a 7 no sentido horário a partir de cima; `0x0F` é neutro.
-- Eixos X e Y: de -127 a 127.
-- Pacote: `com.cavaleiro.btpad`.
-
-</details>
 
 ### NetPad (Wi-Fi)
 
@@ -316,11 +319,9 @@ Use se o seu celular não aceitar o modo controle Bluetooth. Só funciona com o 
 5. Na engrenagem, informe o IP do tablet e o jogador. Mantenha a porta base em 55400.
 6. Abra o jogo no RetroArch e mantenha o NetPad aberto no celular.
 
-O jogador 1 usa a porta 55400 e o jogador 2, a 55401. O IP de fábrica do app é `192.168.0.5`, o do tablet de testes, então confira o seu.
-
 ## Compilar os apps
 
-O projeto não usa Gradle. Os scripts chamam as ferramentas do Android diretamente e só rodam no Windows, com PowerShell.
+Extraia [`app-controle-codigo.rar`](app-controle-codigo.rar). Os scripts chamam as ferramentas do Android diretamente e rodam no Windows com PowerShell:
 
 1. Baixe e extraia em `gamepad-app/tools/`:
 
@@ -330,26 +331,16 @@ O projeto não usa Gradle. Os scripts chamam as ferramentas do Android diretamen
    | Build-tools 34 | [build-tools_r34-windows.zip](https://dl.google.com/android/repository/build-tools_r34-windows.zip) | `bt-x` |
    | Android 34 | [platform-34-ext7_r03.zip](https://dl.google.com/android/repository/platform-34-ext7_r03.zip) | `plat-x` |
 
-2. Ajuste os caminhos no início do `build.ps1`, que hoje apontam para `C:\Users\worker\Desktop\tablet`.
+2. Ajuste os caminhos no início do `build.ps1`.
 3. Compile:
 
    ```powershell
    powershell -File gamepad-bt\build.ps1
    ```
 
-O APK sai em `gamepad-bt/build/BTPad.apk`.
-
-**Antes de compilar o NetPad:** o `gamepad-app/build.ps1` está desatualizado. Acrescente `-encoding UTF-8` à linha do `javac`, senão os acentos quebram. Ele também guarda a chave dentro de `build/`, que é apagada a cada compilação, então cada APK novo exige desinstalar o anterior.
-
 ## Usar com um agente de IA
 
-Os prompts são independentes, e cada um começa com uma varredura do aparelho para decidir o que fazer naquele modelo. Preencha a parte `DADOS` e cole em um agente com acesso ao terminal do computador ligado ao tablet.
-
-- [`Prompt-1-otimizar-tablet.txt`](Prompt-1-otimizar-tablet.txt): otimização, com aprovação antes de remover qualquer app.
-- [`Prompt-2-emulador.txt`](Prompt-2-emulador.txt): RetroArch, jogos, controles e recriação do BTPad.
-- [`Prompt-3-emulador-ps2.txt`](Prompt-3-emulador-ps2.txt): ARMSX2, com teste de desempenho por jogo.
-
-O processo só foi executado de ponta a ponta no Tab A8. A varredura ainda não foi rodada como um bloco único.
+Os prompts completos (Prompt 1 para otimização e Prompt 2 para emuladores e BTPad) estão na seção final de [`Passo-a-passo-Galaxy-Tab-A8.md`](Passo-a-passo-Galaxy-Tab-A8.md).
 
 ## Problemas comuns
 
@@ -357,18 +348,17 @@ O processo só foi executado de ponta a ponta no Tab A8. A varredura ainda não 
 | --- | --- |
 | `adb devices` vazio | Troque o cabo, use o modo Transferência de arquivos ou ligue a Ancoragem USB |
 | `INSTALL_FAILED_VERIFICATION_FAILURE` | Copie o APK para o tablet e instale pelo gerenciador de arquivos. Não desative o verificador |
-| `more than one device` | Use `adb -s SERIAL` |
-| Um app removido fez falta | Rode `adb shell cmd package install-existing NOME.DO.PACOTE` |
+| `more than one device` | Use `adb -s SERIAL` (o [`otimizador_tablet.py`](otimizador_tablet.py) faz isso automaticamente) |
+| Um app removido fez falta | Rode `restaurar_apps.bat`, use a opção `[6]` do menu Python ou `adb shell cmd package install-existing NOME.DO.PACOTE` |
+| Compilação `speed` ocupou muito espaço em tablet de 32 GB | Use `cmd package compile -m speed-profile -f PACOTE` seguido de `pm trim-caches 999G` |
 | Apps removidos voltaram | Uma atualização do sistema pode reinstalá-los. Remova de novo |
 | Menu inacessível no jogo | Ative o atalho de Start antes de esconder o overlay |
 | Overlay ou atalho voltam ao reabrir | Salve a configuração atual ou saia pelo menu do RetroArch |
 | Tablet diz "não foi possível conectar" | Abra o BTPad no celular e toque em CONECTAR |
 | Tablet virou controle do celular | Desinstale o BTPad do tablet |
 | Controle cai durante o jogo | Mantenha o BTPad aberto na tela do celular |
-| Atualização do BTPad recusada | Desinstale a versão assinada com outra chave e instale de novo |
-| Jogo de PS2 lento | Veja o guia do ARMSX2, confirme o ajuste automático e teste um jogo mais leve |
 
-Mais detalhes em [`Tutoriais/Passo-a-passo-Galaxy-Tab-A8.md`](Tutoriais/Passo-a-passo-Galaxy-Tab-A8.md).
+Mais detalhes em [`Passo-a-passo-Galaxy-Tab-A8.md`](Passo-a-passo-Galaxy-Tab-A8.md), [`Passo-a-passo-Galaxy-Tab-A-SM-T510.md`](Passo-a-passo-Galaxy-Tab-A-SM-T510.md) e [`SPEC.md`](SPEC.md).
 
 ## Direitos autorais
 

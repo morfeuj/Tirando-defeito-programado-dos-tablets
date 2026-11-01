@@ -530,3 +530,12 @@ Se o celular não aceitar o modo controle, explique e proponha o plano B: app qu
 FASE 7: ENTREGA
 Deixe na pasta de trabalho: varredura-emulador.txt, os APKs, o código do app e um resumo com o que foi instalado, onde está cada jogo, como abrir o menu, o que foi comprovado e o que não foi testado. Apague arquivos temporários do tablet e volte ao padrão qualquer ajuste feito só para testar, como stay_on_while_plugged_in.
 ```
+
+
+---
+
+## Atualização v2.0 (01/11/2026): Automação em Python e Suporte ao Galaxy Tab A 10.1 (`SM-T510`)
+
+- **Menu Interativo em Python:** Todo o processo manual deste guia foi automatizado em [`otimizador_tablet.py`](otimizador_tablet.py) (inicializado por [`iniciar_otimizador.bat`](iniciar_otimizador.bat)).
+- **Novo Modelo Homologado (`SM-T510`):** A documentação detalhada da execução no **Samsung Galaxy Tab A 10.1 (2019) — `SM-T510` (`gta3xlwifi`)**, incluindo preservação seletiva de aplicativos de streaming/Google e o guia de atualização para **LineageOS 20/21 (Android 13/14)**, está disponível em [`Passo-a-passo-Galaxy-Tab-A-SM-T510.md`](Passo-a-passo-Galaxy-Tab-A-SM-T510.md).
+- **Especificação Técnica:** Consulte [`SPEC.md`](SPEC.md) para a arquitetura completa do sistema, categorias de pacotes e benchmarks comparativos.

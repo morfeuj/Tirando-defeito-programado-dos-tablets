@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+platform-tools/
+platform-tools-latest-windows.zip
