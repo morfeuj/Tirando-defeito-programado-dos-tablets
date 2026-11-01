@@ -1,4 +1,5 @@
-﻿# Otimizador de Tablets Samsung / Android v2.0 - App Grafico Nativo Windows (WinForms)
+﻿param([switch]$TestMode)
+# Otimizador de Tablets Samsung / Android v2.0 - App Grafico Nativo Windows (WinForms)
 # Roda nativamente em qualquer Windows 10/11 sem precisar instalar Python!
 
 Add-Type -AssemblyName System.Windows.Forms
@@ -511,4 +512,10 @@ $Form.Add_Shown({
     Invoke-TabletScan
 })
 
-[void]$Form.ShowDialog()
+if ($TestMode) {
+    Write-Host "[TESTE GUI OK] Janela construida com sucesso!"
+    Invoke-TabletScan
+    Write-Host "[TESTE SCAN OK] Status: $($LblStatus.Text) | Modelo: $($LblCardModelo.Text) | RAM: $($LblCardRam.Text) | Storage: $($LblCardStorage.Text) | Apps: $($LblCardApps.Text)"
+} else {
+    [void]$Form.ShowDialog()
+}
