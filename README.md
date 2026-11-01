@@ -6,7 +6,11 @@ Foi desenvolvido, homologado e medido em dois modelos reais da Samsung:
 1. **Samsung Galaxy Tab A8 (`SM-X200`)** — Android 14, One UI 6, chip Unisoc T618 e 3,4 GB de RAM (foco em console de emulação dedicado).
 2. **Samsung Galaxy Tab A 10.1 2019 (`SM-T510`, `gta3xlwifi`)** — Android 11 (`RP1A.200720.012.T510XXS5CVL1`), One UI Core 3.1, chip Exynos 7904 e 2 GB de RAM (foco em uso multimídia mantendo apps de Streaming, Gmail, YouTube e Fotos).
 
-Em qualquer modelo Samsung ou Android, basta dar dois cliques no aplicativo gráfico nativo para Windows [`Otimizador_Tablet_App.bat`](Otimizador_Tablet_App.bat) (que abre a interface visual [`OtimizadorGUI.ps1`](OtimizadorGUI.ps1) sem precisar de Python instalado) ou usar a versão de terminal em Python [`otimizador_tablet.py`](otimizador_tablet.py) ([`iniciar_otimizador.bat`](iniciar_otimizador.bat)).
+Em qualquer modelo Samsung ou Android, basta dar dois cliques no aplicativo gráfico nativo para Windows [`OtimizadorTabletSamsung.exe`](OtimizadorTabletSamsung.exe) (ou [`Otimizador_Tablet_App.bat`](Otimizador_Tablet_App.bat), que abrem a interface visual sem precisar de Python instalado) ou usar a versão de terminal em Python [`otimizador_tablet.py`](otimizador_tablet.py) ([`iniciar_otimizador.bat`](iniciar_otimizador.bat)).
+
+> [!WARNING]
+> **Termo de Uso e Isenção de Responsabilidade:**  
+> Todas as alterações realizadas no aparelho por meio dos scripts, comandos ADB ou aplicativos deste repositório são de **inteira e exclusiva responsabilidade de quem os estiver executando**. Embora os métodos descritos não exijam root e operem de forma reversível para o usuário atual (`--user 0`), o autor e os colaboradores não se responsabilizam por eventuais perdas de dados, falhas de funcionamento ou uso indevido. Faça sempre backup dos seus arquivos importantes antes de iniciar.
 
 ## Conteúdo
 

@@ -367,6 +367,7 @@ def cabecalho(adb: GerenciadorADB):
     os.system("cls" if os.name == "nt" else "clear")
     print(f"{Cor.CIANO}{Cor.BOLD}======================================================================{Cor.RESET}")
     print(f"{Cor.CIANO}{Cor.BOLD}   OTIMIZADOR DE TABLET SAMSUNG / ANDROID (SEM ROOT VIA ADB){Cor.RESET}")
+    print(f"{Cor.AMARELO}   AVISO: Todas as alterações são de inteira responsabilidade de quem executa.{Cor.RESET}")
     print(f"{Cor.CIANO}{Cor.BOLD}======================================================================{Cor.RESET}")
 
     if adb.adb_path:

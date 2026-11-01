@@ -15,8 +15,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Projeto Tirando Defeito Programado dos Tablets")]
 [assembly: AssemblyProduct("OtimizadorTabletSamsung")]
 [assembly: AssemblyCopyright("Copyright (c) 2026")]
-[assembly: AssemblyVersion("2.0.0.0")]
-[assembly: AssemblyFileVersion("2.0.0.0")]
+[assembly: AssemblyVersion("2.1.0.0")]
+[assembly: AssemblyFileVersion("2.1.0.0")]
 
 namespace OtimizadorTabletSamsung
 {
@@ -216,7 +216,7 @@ namespace OtimizadorTabletSamsung
 
         private void InicializarComponentes()
         {
-            Text = "Otimizador de Tablets Samsung / Android v2.0 (Executavel Nativo Windows - Sem Python)";
+            Text = "Otimizador de Tablets Samsung / Android v2.1 (Executavel Nativo Windows - Sem Python)";
             Size = new Size(1050, 750);
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = bgDark;
@@ -234,7 +234,7 @@ namespace OtimizadorTabletSamsung
             };
             lblStatusAdb = new Label
             {
-                Text = "Pronto para conectar via ADB",
+                Text = "Pronto para conectar via ADB | AVISO: O uso e as alteracoes sao de inteira responsabilidade do usuario.",
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 ForeColor = accentOrange,
                 AutoSize = true,
@@ -333,34 +333,56 @@ namespace OtimizadorTabletSamsung
             Button btnCheckUpd = CriarBotao("8. Verificar Atualizacao do Android / Abrir OTA", bgInput, 36);
             Button btnReboot = CriarBotao("9. Reiniciar Tablet (Consolidar RAM)", bgInput, 36);
 
-            btnScan.Click += async (s, e) => await ExecutarVarreduraAsync();
-            btnSoBloat.Click += async (s, e) => await RemoverBloatwareAsync();
-            btnSoSistema.Click += async (s, e) => await OtimizarSistemaAsync();
+            btnScan.Click += async (s, e) => await ExecutarVarreduraAsync(true);
+            btnSoBloat.Click += async (s, e) => {
+                if (!ConfirmarResponsabilidade("Remover Bloatware Selecionado")) return;
+                await RemoverBloatwareAsync(true);
+            };
+            btnSoSistema.Click += async (s, e) => {
+                if (!ConfirmarResponsabilidade("Otimizar Sistema (Animacoes, Cache e Compilacao ART)")) return;
+                await OtimizarSistemaAsync(true);
+            };
             btnOtimizar.Click += async (s, e) => {
-                await ExecutarVarreduraAsync();
-                await RemoverBloatwareAsync();
-                await OtimizarSistemaAsync();
-                MessageBox.Show("Otimizacao concluida com sucesso!\n\nClique em '9. Reiniciar Tablet' para consolidar a memoria RAM livre.", "Otimizacao Concluida", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (!ConfirmarResponsabilidade("Otimizacao Completa (3 Etapas)")) return;
+                bool conectado = await ExecutarVarreduraAsync(false);
+                if (!conectado)
+                {
+                    MessageBox.Show("Conecte o tablet no cabo USB e autorize a Depuracao USB na tela do aparelho antes de iniciar.", "Tablet Nao Conectado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                MessageBox.Show("Etapa 1/3 concluida: Diagnostico inicial realizado!\n\nIniciando agora a Etapa 2/3 (Remocao de Bloatware)...", "Etapa 1/3 Concluida", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                int qtdRemovida = await RemoverBloatwareAsync(false);
+                MessageBox.Show("Etapa 2/3 concluida: " + qtdRemovida + " pacotes de bloatware removidos/desativados!\n\nIniciando agora a Etapa 3/3 (Desligar Animacoes + Limpar Cache + Compilar ART)...", "Etapa 2/3 Concluida", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                await OtimizarSistemaAsync(false);
+                MessageBox.Show("Etapa 3/3 concluida!\n\nResumo Final:\n- Aparelho: " + lblCardModelo.Text + "\n- RAM Livre: " + lblCardRam.Text + "\n- Armazenamento: " + lblCardStorage.Text + "\n- Pacotes Ativos: " + lblCardApps.Text + "\n\nClique em '9. Reiniciar Tablet' para consolidar a memoria RAM livre.", "Otimizacao Completa (3/3)!", MessageBoxButtons.OK, MessageBoxIcon.Information);
             };
             btnBenchmark.Click += async (s, e) => await MedirDesempenhoAsync();
             btnRestaurar.Click += async (s, e) => await RestaurarAppsAsync();
             btnPastasRom.Click += async (s, e) => {
+                if (!await VerificarConexaoAsync(true)) return;
                 await RodarAdbAsync("shell mkdir -p /sdcard/ROMs/_BIOS /sdcard/ROMs/_BIOS/ps2 /sdcard/ROMs/psx /sdcard/ROMs/ps2 /sdcard/ROMs/psp /sdcard/ROMs/n64 /sdcard/ROMs/snes /sdcard/ROMs/nes /sdcard/ROMs/gba /sdcard/ROMs/gb /sdcard/ROMs/gbc /sdcard/ROMs/nds /sdcard/ROMs/megadrive /sdcard/ROMs/mastersystem /sdcard/ROMs/gamegear /sdcard/ROMs/arcade");
                 Log("[OK] Pastas criadas em /sdcard/ROMs/ no tablet!");
+                MessageBox.Show("Etapa concluida!\n\nTodas as pastas de emuladores (psx, ps2, psp, n64, snes, nes, gba, megadrive, etc.) foram criadas em /sdcard/ROMs/ no seu tablet!", "Pastas de ROMs Criadas", MessageBoxButtons.OK, MessageBoxIcon.Information);
             };
             btnCheckUpd.Click += async (s, e) => {
-                string build = await RodarAdbAsync("shell getprop ro.build.display.id");
-                string patch = await RodarAdbAsync("shell getprop ro.build.version.security_patch");
-                string treble = await RodarAdbAsync("shell getprop ro.treble.enabled");
+                if (!await VerificarConexaoAsync(true)) return;
+                string build = (await RodarAdbAsync("shell getprop ro.build.display.id")).Trim();
+                string patch = (await RodarAdbAsync("shell getprop ro.build.version.security_patch")).Trim();
+                string treble = (await RodarAdbAsync("shell getprop ro.treble.enabled")).Trim();
                 Log("Compilacao: " + build + " | Patch: " + patch + " | Project Treble (GSI): " + treble);
                 await RodarAdbAsync("shell am start -a android.settings.SYSTEM_UPDATE_SETTINGS");
                 Log("[OK] Tela de Atualizacao de Software aberta no tablet.");
+                MessageBox.Show("Verificacao de Atualizacao Concluida!\n\n- Compilacao atual: " + build + "\n- Patch de Seguranca: " + patch + "\n- Suporte Project Treble (GSI): " + treble + "\n\nA tela oficial de Atualizacao de Software foi aberta no seu tablet!", "Atualizacao do Android", MessageBoxButtons.OK, MessageBoxIcon.Information);
             };
             btnReboot.Click += async (s, e) => {
-                if (MessageBox.Show("Deseja reiniciar o tablet agora?", "Reiniciar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                if (!await VerificarConexaoAsync(true)) return;
+                if (MessageBox.Show("Deseja reiniciar o tablet agora?", "Reiniciar Tablet", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
                     await RodarAdbAsync("reboot");
                     Log("Comando de reinicializacao enviado!");
+                    MessageBox.Show("Comando enviado! O seu tablet esta reiniciando agora.", "Reiniciando Tablet", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             };
 
@@ -375,8 +397,23 @@ namespace OtimizadorTabletSamsung
 
             Shown += async (s, e) => {
                 Log("Aplicativo nativo (.exe) iniciado. Verificando tablet conectado...");
-                await ExecutarVarreduraAsync();
+                await ExecutarVarreduraAsync(false);
             };
+        }
+
+        private bool ConfirmarResponsabilidade(string nomeAcao)
+        {
+            DialogResult dr = MessageBox.Show(
+                "AVISO DE RESPONSABILIDADE:\n\n" +
+                "Voce esta prestes a executar: " + nomeAcao + ".\n\n" +
+                "Todas as alteracoes realizadas no aparelho sao de inteira e exclusiva responsabilidade de quem esta executando a ferramenta.\n" +
+                "Embora o processo nao utilize root e gere backup em 'antes.txt' / 'removidos.txt', certifique-se de ter backup de seus dados importantes.\n\n" +
+                "Deseja assumir a responsabilidade e continuar?",
+                "Termo de Responsabilidade - Confirmar Alteracao",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning
+            );
+            return dr == DialogResult.Yes;
         }
 
         private Label CriarCard(TableLayoutPanel parent, int col, string titulo, string valorInicial)
@@ -468,7 +505,7 @@ namespace OtimizadorTabletSamsung
             });
         }
 
-        public async Task<bool> VerificarConexaoAsync()
+        public async Task<bool> VerificarConexaoAsync(bool exibirAlerta = false)
         {
             string outDev = await RodarAdbAsync("devices");
             var linhas = outDev.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
@@ -482,6 +519,8 @@ namespace OtimizadorTabletSamsung
                     {
                         lblStatusAdb.Text = "Tablet detectado (" + partes[0] + ") - Toque em 'Permitir' na tela do tablet!";
                         lblStatusAdb.ForeColor = accentOrange;
+                        if (exibirAlerta)
+                            MessageBox.Show("O tablet (" + partes[0] + ") foi detectado, mas ainda nao foi autorizado!\n\nOlhe a tela do tablet, marque 'Sempre permitir deste computador' e toque em 'Permitir'.", "Autorizacao USB Pendente", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return false;
                     }
                     if (partes[1] == "device")
@@ -493,16 +532,18 @@ namespace OtimizadorTabletSamsung
             }
             lblStatusAdb.Text = "Nenhum tablet conectado via ADB. Conecte o cabo USB e ative a Depuracao USB.";
             lblStatusAdb.ForeColor = accentRed;
+            if (exibirAlerta)
+                MessageBox.Show("Nenhum tablet foi encontrado conectado via ADB!\n\n1. Verifique o cabo USB.\n2. Ative 'Depuracao USB' nas Opcoes do Desenvolvedor.\n3. No Galaxy Tab A8, ative tambem a 'Ancoragem USB'.", "Tablet Desconectado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return false;
         }
 
-        public async Task ExecutarVarreduraAsync()
+        public async Task<bool> ExecutarVarreduraAsync(bool exibirPopup = false)
         {
             AtualizarProgresso(20, 100, "Verificando conexao com o tablet...");
-            if (!await VerificarConexaoAsync())
+            if (!await VerificarConexaoAsync(exibirPopup))
             {
                 AtualizarProgresso(0, 100, "Tablet desconectado.");
-                return;
+                return false;
             }
             AtualizarProgresso(50, 100, "Coletando dados de hardware, RAM e pacotes...");
             string modelo = (await RodarAdbAsync("shell getprop ro.product.model")).Trim();
@@ -533,6 +574,23 @@ namespace OtimizadorTabletSamsung
 
             Log("Diagnostico: " + modelo + " (" + serialAtual + ") | Android " + androidVer + " | RAM Livre: " + memLivreMb + " MB | Apps ativos: " + qtdApps);
             AtualizarProgresso(100, 100, "Diagnostico concluido.");
+
+            if (exibirPopup)
+            {
+                MessageBox.Show(
+                    "Analise / Varredura Concluida!\n\n" +
+                    "- Aparelho: " + modelo + " (" + device + ")\n" +
+                    "- Serial ADB: " + serialAtual + "\n" +
+                    "- Sistema: Android " + androidVer + "\n" +
+                    "- Memoria RAM Livre: " + memLivreMb + " MB de " + memTotalMb + " MB\n" +
+                    "- Armazenamento (/data): " + resumoStorage + "\n" +
+                    "- Pacotes Ativos: " + qtdApps,
+                    "Diagnostico Concluido",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+            }
+            return true;
         }
 
         private double ExtrairKbParaMb(string texto, string chave)
@@ -544,9 +602,9 @@ namespace OtimizadorTabletSamsung
             return 0;
         }
 
-        private async Task RemoverBloatwareAsync()
+        private async Task<int> RemoverBloatwareAsync(bool exibirPopup = false)
         {
-            if (!await VerificarConexaoAsync()) return;
+            if (!await VerificarConexaoAsync(exibirPopup)) return 0;
             string pkgsRaw = await RodarAdbAsync("shell pm list packages -e");
             var ativosSet = new HashSet<string>(
                 pkgsRaw.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
@@ -573,42 +631,91 @@ namespace OtimizadorTabletSamsung
             if (alvos.Count == 0)
             {
                 Log("[OK] Nenhum pacote de bloatware ativo nas categorias selecionadas!");
-                return;
+                if (exibirPopup)
+                    MessageBox.Show("Etapa concluida!\n\nNenhum pacote de bloatware ativo foi encontrado nas categorias selecionadas (seu tablet ja esta limpo!).", "Remocao de Bloatware", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return 0;
             }
 
+            int removidos = 0;
             for (int i = 0; i < alvos.Count; i++)
             {
                 string pkg = alvos[i];
                 AtualizarProgresso(i + 1, alvos.Count, "Removendo (" + (i + 1) + "/" + alvos.Count + "): " + pkg);
                 string res = await RodarAdbAsync("shell pm uninstall --user 0 " + pkg);
                 if (res.IndexOf("Success", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
                     Log("  [OK] Removido: " + pkg);
+                    removidos++;
+                }
                 else
-                    Log("  [Protegido]: " + pkg);
+                {
+                    string resDis = await RodarAdbAsync("shell pm disable-user --user 0 " + pkg);
+                    if (resDis.IndexOf("disabled-user", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        Log("  [OK] Desativado: " + pkg);
+                        removidos++;
+                    }
+                    else
+                    {
+                        Log("  [Protegido]: " + pkg);
+                    }
+                }
             }
-            await ExecutarVarreduraAsync();
+            await ExecutarVarreduraAsync(false);
+            if (exibirPopup)
+            {
+                MessageBox.Show("Etapa de Remocao de Bloatware Concluida!\n\n- Pacotes removidos/desativados agora: " + removidos + " de " + alvos.Count + "\n- Total de pacotes ativos restantes: " + lblCardApps.Text, "Bloatware Removido", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            return removidos;
         }
 
-        private async Task OtimizarSistemaAsync()
+        private async Task OtimizarSistemaAsync(bool exibirPopup = false)
         {
-            if (!await VerificarConexaoAsync()) return;
-            AtualizarProgresso(30, 100, "Desligando animacoes...");
+            if (!await VerificarConexaoAsync(exibirPopup)) return;
+            AtualizarProgresso(25, 100, "Desligando animacoes...");
             await RodarAdbAsync("shell settings put global window_animation_scale 0");
             await RodarAdbAsync("shell settings put global transition_animation_scale 0");
             await RodarAdbAsync("shell settings put global animator_duration_scale 0");
-            AtualizarProgresso(70, 100, "Limpando caches (pm trim-caches 999G)...");
+
+            AtualizarProgresso(50, 100, "Limpando caches (pm trim-caches 999G)...");
             await RodarAdbAsync("shell pm trim-caches 999G");
-            AtualizarProgresso(100, 100, "Otimizacao concluida!");
-            Log("[OK] Animacoes desligadas e caches limpos!");
-            await ExecutarVarreduraAsync();
+
+            AtualizarProgresso(75, 100, "Pre-compilando interface e apps principais (ART speed / speed-profile)...");
+            string[] appsUi = { "com.sec.android.app.launcher", "com.android.systemui", "com.android.settings", "com.samsung.android.honeyboard" };
+            foreach (var app in appsUi)
+                await RodarAdbAsync("shell cmd package compile -m speed -f " + app);
+
+            string[] appsMedia = { "com.google.android.youtube", "com.google.android.gm", "com.google.android.apps.photos", "com.netflix.mediaclient", "com.disney.disneyplus", "com.spotify.music", "com.android.chrome" };
+            foreach (var app in appsMedia)
+                await RodarAdbAsync("shell cmd package compile -m speed-profile -f " + app);
+
+            await RodarAdbAsync("shell pm trim-caches 999G");
+            AtualizarProgresso(100, 100, "Otimizacao de sistema concluida!");
+            Log("[OK] Animacoes desligadas, caches limpos e apps pre-compilados!");
+            await ExecutarVarreduraAsync(false);
+
+            if (exibirPopup)
+            {
+                MessageBox.Show(
+                    "Etapa de Otimizacao do Sistema Concluida!\n\n" +
+                    "- Animacoes da interface: Desligadas (0.0)\n" +
+                    "- Caches de aplicativos: Limpos\n" +
+                    "- Compilacao ART (speed / speed-profile): Concluida\n" +
+                    "- Armazenamento atual: " + lblCardStorage.Text,
+                    "Sistema Otimizado",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+            }
         }
 
         private async Task MedirDesempenhoAsync()
         {
-            if (!await VerificarConexaoAsync()) return;
+            if (!await VerificarConexaoAsync(true)) return;
             var tempos = new List<int>();
             for (int i = 1; i <= 3; i++)
             {
+                AtualizarProgresso(i, 3, "Medindo tempo de abertura (" + i + "/3)...");
                 await RodarAdbAsync("shell am force-stop com.android.settings");
                 await Task.Delay(700);
                 string res = await RodarAdbAsync("shell am start -W -n com.android.settings/.Settings");
@@ -620,26 +727,49 @@ namespace OtimizadorTabletSamsung
                     Log("  Teste " + i + "/3: " + ms + " ms");
                 }
             }
-            if (tempos.Count > 0) Log("[Benchmark] Media: " + Math.Round(tempos.Average(), 1) + " ms");
-            await ExecutarVarreduraAsync();
+            await ExecutarVarreduraAsync(false);
+            if (tempos.Count > 0)
+            {
+                double media = Math.Round(tempos.Average(), 1);
+                Log("[Benchmark] Media: " + media + " ms");
+                MessageBox.Show(
+                    "Benchmark de Desempenho Concluido!\n\n" +
+                    "- Tempo medio de abertura (Configuracoes): " + media + " ms\n" +
+                    "- Medicoes individuais: " + string.Join(" ms, ", tempos) + " ms\n" +
+                    "- Memoria RAM Livre: " + lblCardRam.Text + "\n" +
+                    "- Pacotes Ativos: " + lblCardApps.Text,
+                    "Resultado do Benchmark",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+            }
         }
 
         private async Task RestaurarAppsAsync()
         {
-            if (!await VerificarConexaoAsync()) return;
+            if (!await VerificarConexaoAsync(true)) return;
             string arqRem = Path.Combine(baseDir, "removidos.txt");
-            if (!File.Exists(arqRem)) return;
+            if (!File.Exists(arqRem))
+            {
+                MessageBox.Show("Arquivo removidos.txt nao encontrado.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
             var lista = File.ReadAllLines(arqRem).Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+            if (MessageBox.Show("Deseja reinstalar todos os " + lista.Count + " pacotes de removidos.txt e reativar as animacoes?", "Confirmar Restauracao", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
             for (int i = 0; i < lista.Count; i++)
             {
-                AtualizarProgresso(i + 1, lista.Count, "Restaurando: " + lista[i]);
+                AtualizarProgresso(i + 1, lista.Count, "Restaurando (" + (i + 1) + "/" + lista.Count + "): " + lista[i]);
+                await RodarAdbAsync("shell pm enable " + lista[i].Trim());
                 await RodarAdbAsync("shell cmd package install-existing " + lista[i].Trim());
             }
             await RodarAdbAsync("shell settings put global window_animation_scale 1");
             await RodarAdbAsync("shell settings put global transition_animation_scale 1");
             await RodarAdbAsync("shell settings put global animator_duration_scale 1");
             Log("[OK] Restauracao concluida!");
-            await ExecutarVarreduraAsync();
+            await ExecutarVarreduraAsync(false);
+            MessageBox.Show("Restauracao Concluida!\n\nTodos os " + lista.Count + " pacotes foram reinstalados e as animacoes voltaram ao padrao (1.0).", "Restauracao Concluida", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 
@@ -650,11 +780,26 @@ namespace OtimizadorTabletSamsung
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            MainForm form = new MainForm();
             if (args != null && args.Length > 0 && args[0] == "-TestMode")
+            {
+                MainForm testForm = new MainForm();
+                return;
+            }
+            DialogResult termo = MessageBox.Show(
+                "TERMO DE USO E ISENCAO DE RESPONSABILIDADE\n\n" +
+                "1. Esta ferramenta executa comandos via ADB no tablet conectado.\n" +
+                "2. TODAS as alteracoes realizadas sao de inteira responsabilidade do usuario que estiver executando o programa.\n" +
+                "3. O autor e os colaboradores do projeto nao se responsabilizam por eventuais perdas de dados, falhas ou mau uso.\n\n" +
+                "Voce concorda com estes termos e assume total responsabilidade pelo uso?",
+                "Aviso Importante - Termo de Responsabilidade",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning
+            );
+            if (termo != DialogResult.Yes)
             {
                 return;
             }
+            MainForm form = new MainForm();
             Application.Run(form);
         }
     }

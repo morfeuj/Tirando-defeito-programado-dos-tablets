@@ -1,11 +1,25 @@
 ﻿param([switch]$TestMode)
-# Otimizador de Tablets Samsung / Android v2.0 - App Grafico Nativo Windows (WinForms)
+# Otimizador de Tablets Samsung / Android v2.1 - App Grafico Nativo Windows (WinForms)
 # Roda nativamente em qualquer Windows 10/11 sem precisar instalar Python!
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 [System.Windows.Forms.Application]::EnableVisualStyles()
+
+if (-not $TestMode) {
+    $Termo = [System.Windows.Forms.MessageBox]::Show(
+        "TERMO DE USO E ISENÇÃO DE RESPONSABILIDADE`n`n" +
+        "1. Esta ferramenta executa comandos via ADB no tablet conectado.`n" +
+        "2. TODAS as alterações realizadas são de inteira e exclusiva responsabilidade de quem estiver executando o programa.`n" +
+        "3. O autor e os colaboradores do projeto não se responsabilizam por eventuais perdas de dados, falhas ou mau uso.`n`n" +
+        "Você concorda com estes termos e assume total responsabilidade pelo uso?",
+        "Aviso Importante - Termo de Responsabilidade",
+        "YesNo",
+        "Warning"
+    )
+    if ($Termo -ne "Yes") { exit 0 }
+}
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location -Path $ScriptDir
@@ -48,7 +62,7 @@ $Categorias = @(
 
 # Janela Principal
 $Form = New-Object System.Windows.Forms.Form
-$Form.Text = "Otimizador de Tablets Samsung / Android v2.0 (App Nativo Windows - Sem Python)"
+$Form.Text = "Otimizador de Tablets Samsung / Android v2.1 (App Nativo Windows - Sem Python)"
 $Form.Size = New-Object System.Drawing.Size(1050, 750)
 $Form.StartPosition = "CenterScreen"
 $Form.BackColor = $BgDark
@@ -69,7 +83,7 @@ $LblTitulo.AutoSize = $true
 $LblTitulo.Location = New-Object System.Drawing.Point(16, 10)
 
 $LblStatus = New-Object System.Windows.Forms.Label
-$LblStatus.Text = "Pronto para conectar via ADB"
+$LblStatus.Text = "Pronto para conectar via ADB | AVISO: Alterações são de inteira responsabilidade do usuário."
 $LblStatus.Font = New-Object System.Drawing.Font("Segoe UI", 9.5, [System.Drawing.FontStyle]::Bold)
 $LblStatus.ForeColor = $AccentOrange
 $LblStatus.AutoSize = $true
@@ -131,7 +145,7 @@ $PnlFooter.Height = 200
 $PnlFooter.Padding = New-Object System.Windows.Forms.Padding(12, 4, 12, 12)
 
 $LblProg = New-Object System.Windows.Forms.Label
-$LblProg.Text = "Aguardando comando..."
+$LblProg.Text = "Aguardando comando... (Todas as alterações são de responsabilidade de quem executa)"
 $LblProg.Dock = "Top"
 $LblProg.Height = 20
 $LblProg.ForeColor = $TextMuted
@@ -167,6 +181,20 @@ function Set-GuiProgress($Valor, $Max, $Texto) {
     [System.Windows.Forms.Application]::DoEvents()
 }
 
+function Confirm-UserResponsibility($NomeAcao) {
+    $Dr = [System.Windows.Forms.MessageBox]::Show(
+        "AVISO DE RESPONSABILIDADE:`n`n" +
+        "Você está prestes a executar: $NomeAcao.`n`n" +
+        "Todas as alterações realizadas no aparelho são de inteira e exclusiva responsabilidade de quem está executando a ferramenta.`n" +
+        "Embora o processo não utilize root e gere backup em 'antes.txt' / 'removidos.txt', certifique-se de ter backup de seus dados importantes.`n`n" +
+        "Deseja assumir a responsabilidade e continuar?",
+        "Termo de Responsabilidade - Confirmar Alteração",
+        "YesNo",
+        "Warning"
+    )
+    return ($Dr -eq "Yes")
+}
+
 function Invoke-AdbCommand([string[]]$Argumentos) {
     if (-not (Test-Path $AdbLocal)) {
         Write-GuiLog "Baixando ADB oficial do Google (~15 MB)..."
@@ -187,7 +215,7 @@ function Invoke-AdbCommand([string[]]$Argumentos) {
     return $Saida.Trim()
 }
 
-function Test-TabletConnection {
+function Test-TabletConnection([bool]$ExibirAlerta = $false) {
     $Out = Invoke-AdbCommand @("devices")
     $Linhas = $Out -split "`r?`n"
     foreach ($L in $Linhas) {
@@ -195,6 +223,9 @@ function Test-TabletConnection {
             $LblStatus.Text = "Tablet detectado ($($Matches[1])) - Toque em 'Permitir' na tela do tablet!"
             $LblStatus.ForeColor = $AccentOrange
             Write-GuiLog "[!] Olhe a tela do tablet e toque em 'Permitir depuração USB'."
+            if ($ExibirAlerta) {
+                [System.Windows.Forms.MessageBox]::Show("O tablet ($($Matches[1])) foi detectado, mas ainda não foi autorizado!`n`nOlhe a tela do tablet, marque 'Sempre permitir deste computador' e toque em 'Permitir'.", "Autorização USB Pendente", "OK", "Warning") | Out-Null
+            }
             return $false
         }
         if ($L -match "^(\S+)\s+device\b") {
@@ -205,14 +236,17 @@ function Test-TabletConnection {
     $LblStatus.Text = "Nenhum tablet conectado via ADB. Conecte o cabo USB e ative a Depuração USB."
     $LblStatus.ForeColor = $AccentRed
     Write-GuiLog "[!] Nenhum tablet encontrado em estado 'device'."
+    if ($ExibirAlerta) {
+        [System.Windows.Forms.MessageBox]::Show("Nenhum tablet foi encontrado conectado via ADB!`n`n1. Verifique o cabo USB.`n2. Ative 'Depuração USB' nas Opções do Desenvolvedor.`n3. No Galaxy Tab A8, ative também a 'Ancoragem USB'.", "Tablet Desconectado", "OK", "Warning") | Out-Null
+    }
     return $false
 }
 
-function Invoke-TabletScan {
+function Invoke-TabletScan([bool]$ExibirPopup = $false) {
     Set-GuiProgress 20 100 "Verificando conexão com o tablet..."
-    if (-not (Test-TabletConnection)) {
+    if (-not (Test-TabletConnection $ExibirPopup)) {
         Set-GuiProgress 0 100 "Tablet desconectado."
-        return
+        return $false
     }
     Set-GuiProgress 50 100 "Coletando dados de hardware, RAM, armazenamento e pacotes..."
     $Modelo  = Invoke-AdbCommand @("shell", "getprop ro.product.model")
@@ -242,6 +276,22 @@ function Invoke-TabletScan {
 
     Write-GuiLog "Diagnóstico: $Modelo ($($script:SerialAtual)) | Android $Android | RAM Livre: $MemLivreMb MB | Armazenamento: $StorageTxt | Apps ativos: $($ListaPkgs.Count)"
     Set-GuiProgress 100 100 "Diagnóstico concluído."
+
+    if ($ExibirPopup) {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Análise / Varredura Concluída!`n`n" +
+            "- Aparelho: $Modelo ($Device)`n" +
+            "- Serial ADB: $($script:SerialAtual)`n" +
+            "- Sistema: Android $Android`n" +
+            "- Memória RAM Livre: $MemLivreMb MB de $MemTotalMb MB`n" +
+            "- Armazenamento (/data): $StorageTxt`n" +
+            "- Pacotes Ativos: $($ListaPkgs.Count)",
+            "Diagnóstico Concluído",
+            "OK",
+            "Information"
+        ) | Out-Null
+    }
+    return $true
 }
 
 # Painel Central Dividido
@@ -327,8 +377,8 @@ $BtnPastasRom = New-ActionBtn "7. Criar Pastas de Emuladores (/sdcard/ROMs)" $Bg
 $BtnCheckUpd  = New-ActionBtn "8. Verificar Atualização do Android / Abrir OTA" $BgInput 36
 $BtnReboot    = New-ActionBtn "9. Reiniciar Tablet (Consolidar RAM)" $BgInput 36
 
-function Invoke-BloatwareRemoval {
-    if (-not (Test-TabletConnection)) { return }
+function Invoke-BloatwareRemoval([bool]$ExibirPopup = $false) {
+    if (-not (Test-TabletConnection $ExibirPopup)) { return 0 }
     $PkgsRaw = Invoke-AdbCommand @("shell", "pm list packages -e")
     $Ativos = @{}
     foreach ($L in ($PkgsRaw -split "`r?`n")) {
@@ -358,7 +408,10 @@ function Invoke-BloatwareRemoval {
 
     if ($Alvos.Count -eq 0) {
         Write-GuiLog "[OK] Nenhum pacote de bloatware ativo nas categorias selecionadas (seu tablet já está limpo!)."
-        return
+        if ($ExibirPopup) {
+            [System.Windows.Forms.MessageBox]::Show("Etapa concluída!`n`nNenhum pacote de bloatware ativo foi encontrado nas categorias selecionadas (seu tablet já está limpo!).", "Remoção de Bloatware", "OK", "Information") | Out-Null
+        }
+        return 0
     }
 
     Write-GuiLog "Removendo $($Alvos.Count) pacotes no usuário 0..."
@@ -388,11 +441,15 @@ function Invoke-BloatwareRemoval {
         ($Existentes + $Removidos | Where-Object { $_.Trim() -ne "" } | Select-Object -Unique | Sort-Object) | Set-Content -Path $ArqRem -Encoding UTF8
     }
     Write-GuiLog "[Concluído] $($Removidos.Count) pacotes removidos/desativados!"
-    Invoke-TabletScan
+    [void](Invoke-TabletScan $false)
+    if ($ExibirPopup) {
+        [System.Windows.Forms.MessageBox]::Show("Etapa de Remoção de Bloatware Concluída!`n`n- Pacotes removidos/desativados agora: $($Removidos.Count) de $($Alvos.Count)`n- Total de pacotes ativos restantes: $($LblCardApps.Text)", "Bloatware Removido", "OK", "Information") | Out-Null
+    }
+    return $Removidos.Count
 }
 
-function Invoke-SystemOptimization {
-    if (-not (Test-TabletConnection)) { return }
+function Invoke-SystemOptimization([bool]$ExibirPopup = $false) {
+    if (-not (Test-TabletConnection $ExibirPopup)) { return }
     Set-GuiProgress 25 100 "Desligando animações da interface..."
     Write-GuiLog "Desligando animações (escala = 0)..."
     [void](Invoke-AdbCommand @("shell", "settings put global window_animation_scale 0"))
@@ -414,21 +471,48 @@ function Invoke-SystemOptimization {
     [void](Invoke-AdbCommand @("shell", "pm trim-caches 999G"))
     Set-GuiProgress 100 100 "Otimização de sistema concluída!"
     Write-GuiLog "[OK] Animações desligadas, caches limpos e apps pré-compilados!"
-    Invoke-TabletScan
+    [void](Invoke-TabletScan $false)
+
+    if ($ExibirPopup) {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Etapa de Otimização do Sistema Concluída!`n`n" +
+            "- Animações da interface: Desligadas (0.0)`n" +
+            "- Caches de aplicativos: Limpos`n" +
+            "- Compilação ART (speed / speed-profile): Concluída`n" +
+            "- Armazenamento atual: $($LblCardStorage.Text)",
+            "Sistema Otimizado",
+            "OK",
+            "Information"
+        ) | Out-Null
+    }
 }
 
-$BtnScan.Add_Click({ Invoke-TabletScan })
-$BtnSoBloat.Add_Click({ Invoke-BloatwareRemoval })
-$BtnSoSistema.Add_Click({ Invoke-SystemOptimization })
+$BtnScan.Add_Click({ [void](Invoke-TabletScan $true) })
+$BtnSoBloat.Add_Click({
+    if (-not (Confirm-UserResponsibility "Remover Bloatware Marcado")) { return }
+    [void](Invoke-BloatwareRemoval $true)
+})
+$BtnSoSistema.Add_Click({
+    if (-not (Confirm-UserResponsibility "Otimizar Sistema (Animações, Cache e Compilação ART)")) { return }
+    Invoke-SystemOptimization $true
+})
 $BtnOtimizar.Add_Click({
-    Invoke-TabletScan
-    Invoke-BloatwareRemoval
-    Invoke-SystemOptimization
-    [System.Windows.Forms.MessageBox]::Show("Otimização concluída com sucesso!`n`nClique em '9. Reiniciar Tablet' para consolidar a memória RAM livre.", "Otimização Concluída", "OK", "Information")
+    if (-not (Confirm-UserResponsibility "Otimização Completa (3 Etapas)")) { return }
+    if (-not (Invoke-TabletScan $false)) {
+        [System.Windows.Forms.MessageBox]::Show("Conecte o tablet no cabo USB e autorize a Depuração USB na tela do aparelho antes de iniciar.", "Tablet Não Conectado", "OK", "Warning") | Out-Null
+        return
+    }
+    [System.Windows.Forms.MessageBox]::Show("Etapa 1/3 concluída: Diagnóstico inicial realizado!`n`nIniciando agora a Etapa 2/3 (Remoção de Bloatware)...", "Etapa 1/3 Concluída", "OK", "Information") | Out-Null
+
+    $QtdRem = Invoke-BloatwareRemoval $false
+    [System.Windows.Forms.MessageBox]::Show("Etapa 2/3 concluída: $QtdRem pacotes de bloatware removidos/desativados!`n`nIniciando agora a Etapa 3/3 (Desligar Animações + Limpar Cache + Compilar ART)...", "Etapa 2/3 Concluída", "OK", "Information") | Out-Null
+
+    Invoke-SystemOptimization $false
+    [System.Windows.Forms.MessageBox]::Show("Etapa 3/3 concluída!`n`nResumo Final:`n- Aparelho: $($LblCardModelo.Text)`n- RAM Livre: $($LblCardRam.Text)`n- Armazenamento: $($LblCardStorage.Text)`n- Pacotes Ativos: $($LblCardApps.Text)`n`nClique em '9. Reiniciar Tablet' para consolidar a memória RAM livre.", "Otimização Completa (3/3)!", "OK", "Information") | Out-Null
 })
 
 $BtnBenchmark.Add_Click({
-    if (-not (Test-TabletConnection)) { return }
+    if (-not (Test-TabletConnection $true)) { return }
     Write-GuiLog "Medindo tempo de abertura do app Configurações (3x)..."
     $Tempos = @()
     for ($i = 1; $i -le 3; $i++) {
@@ -442,18 +526,27 @@ $BtnBenchmark.Add_Click({
             Write-GuiLog "  Teste $i/3: $Ms ms"
         }
     }
+    [void](Invoke-TabletScan $false)
     if ($Tempos.Count -gt 0) {
         $Media = [Math]::Round(($Tempos | Measure-Object -Average).Average, 1)
         Write-GuiLog "[Benchmark] Tempo médio de abertura: $Media ms"
+        [System.Windows.Forms.MessageBox]::Show(
+            "Benchmark de Desempenho Concluído!`n`n" +
+            "- Tempo médio de abertura (Configurações): $Media ms`n" +
+            "- Memória RAM Livre: $($LblCardRam.Text)`n" +
+            "- Pacotes Ativos: $($LblCardApps.Text)",
+            "Resultado do Benchmark",
+            "OK",
+            "Information"
+        ) | Out-Null
     }
-    Invoke-TabletScan
 })
 
 $BtnRestaurar.Add_Click({
-    if (-not (Test-TabletConnection)) { return }
+    if (-not (Test-TabletConnection $true)) { return }
     $ArqRem = Join-Path $ScriptDir "removidos.txt"
     if (-not (Test-Path $ArqRem)) {
-        [System.Windows.Forms.MessageBox]::Show("Arquivo removidos.txt não encontrado.", "Aviso", "OK", "Information")
+        [System.Windows.Forms.MessageBox]::Show("Arquivo removidos.txt não encontrado.", "Aviso", "OK", "Information") | Out-Null
         return
     }
     $Lista = Get-Content $ArqRem | Where-Object { $_.Trim() -ne "" -and -not $_.StartsWith("#") }
@@ -471,30 +564,34 @@ $BtnRestaurar.Add_Click({
     [void](Invoke-AdbCommand @("shell", "settings put global transition_animation_scale 1"))
     [void](Invoke-AdbCommand @("shell", "settings put global animator_duration_scale 1"))
     Write-GuiLog "[OK] Todos os pacotes e animações foram restaurados!"
-    Invoke-TabletScan
+    [void](Invoke-TabletScan $false)
+    [System.Windows.Forms.MessageBox]::Show("Restauração Concluída!`n`nTodos os $($Lista.Count) pacotes foram reinstalados e as animações voltaram ao padrão (1.0).", "Restauração Concluída", "OK", "Information") | Out-Null
 })
 
 $BtnPastasRom.Add_Click({
-    if (-not (Test-TabletConnection)) { return }
+    if (-not (Test-TabletConnection $true)) { return }
     [void](Invoke-AdbCommand @("shell", "mkdir -p /sdcard/ROMs/_BIOS /sdcard/ROMs/_BIOS/ps2 /sdcard/ROMs/psx /sdcard/ROMs/ps2 /sdcard/ROMs/psp /sdcard/ROMs/n64 /sdcard/ROMs/snes /sdcard/ROMs/nes /sdcard/ROMs/gba /sdcard/ROMs/gb /sdcard/ROMs/gbc /sdcard/ROMs/nds /sdcard/ROMs/megadrive /sdcard/ROMs/mastersystem /sdcard/ROMs/gamegear /sdcard/ROMs/arcade"))
     Write-GuiLog "[OK] Pastas criadas em /sdcard/ROMs/ no tablet!"
+    [System.Windows.Forms.MessageBox]::Show("Etapa concluída!`n`nTodas as pastas de emuladores (psx, ps2, psp, n64, snes, nes, gba, megadrive, etc.) foram criadas em /sdcard/ROMs/ no seu tablet!", "Pastas de ROMs Criadas", "OK", "Information") | Out-Null
 })
 
 $BtnCheckUpd.Add_Click({
-    if (-not (Test-TabletConnection)) { return }
+    if (-not (Test-TabletConnection $true)) { return }
     $Build  = Invoke-AdbCommand @("shell", "getprop ro.build.display.id")
     $Patch  = Invoke-AdbCommand @("shell", "getprop ro.build.version.security_patch")
     $Treble = Invoke-AdbCommand @("shell", "getprop ro.treble.enabled")
     Write-GuiLog "Compilação Atual: $Build | Patch de Segurança: $Patch | Project Treble (GSI): $Treble"
     [void](Invoke-AdbCommand @("shell", "am start -a android.settings.SYSTEM_UPDATE_SETTINGS"))
     Write-GuiLog "[OK] Tela de Atualização de Software aberta no tablet."
+    [System.Windows.Forms.MessageBox]::Show("Verificação de Atualização Concluída!`n`n- Compilação atual: $Build`n- Patch de Segurança: $Patch`n- Suporte Project Treble (GSI): $Treble`n`nA tela oficial de Atualização de Software foi aberta no seu tablet!", "Atualização do Android", "OK", "Information") | Out-Null
 })
 
 $BtnReboot.Add_Click({
-    if (-not (Test-TabletConnection)) { return }
+    if (-not (Test-TabletConnection $true)) { return }
     if ([System.Windows.Forms.MessageBox]::Show("Deseja reiniciar o tablet agora?", "Reiniciar", "YesNo", "Question") -eq "Yes") {
         [void](Invoke-AdbCommand @("reboot"))
         Write-GuiLog "Comando de reinicialização enviado!"
+        [System.Windows.Forms.MessageBox]::Show("Comando enviado! O seu tablet está reiniciando agora.", "Reiniciando Tablet", "OK", "Information") | Out-Null
     }
 })
 
@@ -509,13 +606,13 @@ $Form.Controls.Add($PnlFooter)
 
 $Form.Add_Shown({
     Write-GuiLog "Aplicativo iniciado. Verificando tablet conectado..."
-    Invoke-TabletScan
+    [void](Invoke-TabletScan $false)
 })
 
 if ($TestMode) {
     Write-Host "[TESTE GUI OK] Janela construida com sucesso!"
-    Invoke-TabletScan
-    Write-Host "[TESTE SCAN OK] Status: $($LblStatus.Text) | Modelo: $($LblCardModelo.Text) | RAM: $($LblCardRam.Text) | Storage: $($LblCardStorage.Text) | Apps: $($LblCardApps.Text)"
+    [void](Invoke-TabletScan $false)
+    Write-Host "[TESTE SCAN OK] Status: $($LblStatus.Text) | Modelo: $($LblCardModelo.Text)"
 } else {
     [void]$Form.ShowDialog()
 }
