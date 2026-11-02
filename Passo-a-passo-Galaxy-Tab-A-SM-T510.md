@@ -39,10 +39,18 @@ Mesmo mantendo todos esses apps, **67 pacotes de bloatware e serviços em segund
 
 ---
 
-## 2. Como Usar o Otimizador Interativo em Python
+## 2. Como Usar o Aplicativo Gráfico Nativo (`.exe`) ou o Menu em Python
 
-Não é mais necessário digitar comando por comando. Basta executar:
+Você pode escolher entre a **interface gráfica nativa do Windows** (que não exige Python instalado) ou o **menu de terminal em Python**:
 
+### Opção A: Aplicativo Gráfico Nativo Windows (Recomendado para usuários finais)
+Dê dois cliques em **[`OtimizadorTabletSamsung.exe`](OtimizadorTabletSamsung.exe)** (ou em **[`Otimizador_Tablet_App.bat`](Otimizador_Tablet_App.bat)**):
+- Exibe o **Termo de Responsabilidade** ao abrir e antes de aplicar alterações.
+- Mostra cartões em tempo real com **Aparelho/Android**, **RAM Livre**, **Armazenamento (`/data`)** e **Pacotes Ativos**.
+- Permite marcar/desmarcar as 12 categorias de bloatware e proteger com 1 clique seus apps de **Streaming** e **Gmail/Fotos**.
+- Exibe **avisos na tela (popups)** ao concluir cada etapa (1/3 Diagnóstico, 2/3 Remoção de Bloatware, 3/3 Otimização de Sistema).
+
+### Opção B: Menu de Terminal em Python
 ```powershell
 # Pelo terminal ou dando dois cliques em iniciar_otimizador.bat:
 python otimizador_tablet.py

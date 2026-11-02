@@ -1,8 +1,12 @@
 # Especificação Técnica (SPEC) — Sistema de Otimização e Recuperação de Tablets Samsung / Android
 
-**Versão:** 2.0.0  
+**Versão:** 2.1.0  
 **Data:** 01/11/2026  
 **Status:** Validado em Hardware Real (`SM-X200` e `SM-T510`)  
+
+> [!WARNING]
+> **Termo de Uso e Isenção de Responsabilidade:**  
+> Todas as alterações realizadas no aparelho por meio dos executáveis, scripts ou comandos ADB deste repositório são de **inteira e exclusiva responsabilidade de quem os estiver executando**. O aplicativo exibe este termo na inicialização e solicita confirmação explícita antes de aplicar modificações.
 
 ---
 
@@ -10,7 +14,9 @@
 
 Este documento especifica a arquitetura, os requisitos funcionais, os protocolos de segurança e os resultados de engenharia do projeto **Tirando Defeito Programado dos Tablets**.
 
-O objetivo do sistema é recuperar o desempenho, a memória RAM disponível e o armazenamento interno de tablets Android/Samsung antigos ou de entrada **sem exigir acesso root ou desbloqueio de bootloader**, utilizando automação em Python via **ADB (Android Debug Bridge)**, além de prover diagnóstico e suporte para atualização de versão do Android e emulação retrô.
+O objetivo do sistema é recuperar o desempenho, a memória RAM disponível e o armazenamento interno de tablets Android/Samsung antigos ou de entrada **sem exigir acesso root ou desbloqueio de bootloader**, oferecendo duas interfaces de operação para Windows:
+1. **Aplicativo Gráfico Nativo para Windows ([`OtimizadorTabletSamsung.exe`](OtimizadorTabletSamsung.exe) / [`Otimizador_Tablet_App.bat`](Otimizador_Tablet_App.bat)):** Interface visual completa em Windows Forms (Dark Mode) que funciona em qualquer Windows 10/11 **sem exigir Python instalado**, com avisos visuais (`MessageBox`) ao concluir cada etapa e termo de responsabilidade integrado.
+2. **Utilitário Interativo em Python ([`otimizador_tablet.py`](otimizador_tablet.py) / [`iniciar_otimizador.bat`](iniciar_otimizador.bat)):** Interface de linha de comando com menu numerado para terminal.
 
 ---
 
@@ -29,28 +35,37 @@ O objetivo do sistema é recuperar o desempenho, a memória RAM disponível e o 
 
 ---
 
-## 3. Arquitetura do Software (`otimizador_tablet.py`)
+## 3. Arquitetura do Software (`OtimizadorTabletSamsung.exe` & `otimizador_tablet.py`)
 
 ```mermaid
 flowchart TD
-    A[Usuário / Terminal Windows] --> B[iniciar_otimizador.bat]
-    B --> C[otimizador_tablet.py]
+    A[Usuário no Windows 10/11] --> B1[OtimizadorTabletSamsung.exe / OtimizadorGUI.ps1]
+    A --> B2[iniciar_otimizador.bat / otimizador_tablet.py]
+    B1 --> C[Termo de Responsabilidade + Interface Gráfica WinForms]
+    B2 --> C2[Menu Interativo CLI Python]
     C --> D{ADB Disponível?}
+    C2 --> D
     D -->|Não| E[Download Automático platform-tools Google]
-    D -->|Sim| F[GerenciadorADB]
+    D -->|Sim| F[Camada de Execução ADB]
     E --> F
     F --> G[Módulo 1: Conexão USB / TCP-IP Wi-Fi]
-    F --> H[Módulo 2: Varredura Somente Leitura]
-    F --> I[Módulo 3: Debloater Categorizado + Backup]
-    F --> J[Módulo 4: Otimização ART & UI]
-    F --> K[Módulo 5: Benchmark Antes x Depois]
-    F --> L[Módulo 6: Rollback / Restauração]
-    F --> M[Módulo 7: Emulação RetroArch / ROMs]
-    F --> N[Módulo 8: Atualização Android OTA / Odin / GSI]
+    F --> H[Módulo 2: Varredura em 5 Etapas + Popup]
+    F --> I[Módulo 3: Debloater Categorizado + Backup + Popup]
+    F --> J[Módulo 4: Otimização ART & UI + Popup]
+    F --> K[Módulo 5: Benchmark Antes x Depois + Popup]
+    F --> L[Módulo 6: Rollback / Restauração + Popup]
+    F --> M[Módulo 7: Emulação RetroArch / ROMs + Popup]
+    F --> N[Módulo 8: Atualização Android OTA / Odin / GSI + Popup]
 ```
 
 ### 3.1. Componentes Principais
-1. **`GerenciadorADB` ([`otimizador_tablet.py`](otimizador_tablet.py)):**
+1. **Aplicativo Gráfico Nativo ([`OtimizadorTabletSamsung.exe`](OtimizadorTabletSamsung.exe) / [`OtimizadorTabletGUI.cs`](OtimizadorTabletGUI.cs) / [`OtimizadorGUI.ps1`](OtimizadorGUI.ps1)):**
+   - Compilado nativamente para Windows via `.NET Framework 4.x` (`csc.exe`), sem dependência de Python.
+   - Inclui metadados `AssemblyInfo` completos para evitar falsos-positivos heurísticos do Windows Defender.
+   - Exibe **Termo de Uso e Isenção de Responsabilidade** na abertura e antes de qualquer modificação no sistema.
+   - Emite alertas visuais (`MessageBox`) ao concluir cada etapa individual (Diagnóstico, Remoção de Bloatware, Otimização ART, Benchmark, Restauração, Criação de Pastas de ROMs, Verificação OTA e Reboot).
+   - Utiliza leitura direta `adb shell cat /proc/meminfo` (em vez de `grep` com pipe) e inicialização prévia `adb start-server` sem herança de handles de `stdout`/`stderr`, prevenindo travamentos de processos ADB no Windows.
+2. **`GerenciadorADB` ([`otimizador_tablet.py`](otimizador_tablet.py)):**
    - Localiza binário `adb` no `PATH` ou no diretório local `./platform-tools/adb.exe`.
    - Caso ausente, baixa e extrai automaticamente `platform-tools-latest-windows.zip` do repositório oficial do Google.
    - Gerencia múltiplos dispositivos via flag `-s SERIAL` e suporta transição transparente para **ADB over Wi-Fi** (`adb tcpip 5555`).

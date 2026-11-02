@@ -243,17 +243,28 @@ function Test-TabletConnection([bool]$ExibirAlerta = $false) {
 }
 
 function Invoke-TabletScan([bool]$ExibirPopup = $false) {
-    Set-GuiProgress 20 100 "Verificando conexão com o tablet..."
+    Set-GuiProgress 15 100 "[1/5] Verificando conexão USB com o tablet..."
+    Write-GuiLog "Iniciando varredura: verificando conexão USB..."
     if (-not (Test-TabletConnection $ExibirPopup)) {
         Set-GuiProgress 0 100 "Tablet desconectado."
         return $false
     }
-    Set-GuiProgress 50 100 "Coletando dados de hardware, RAM, armazenamento e pacotes..."
+    Set-GuiProgress 35 100 "[2/5] Lendo modelo e versão do Android..."
+    Write-GuiLog "Conectado ao serial $($script:SerialAtual). Lendo modelo e versão do Android..."
     $Modelo  = Invoke-AdbCommand @("shell", "getprop ro.product.model")
     $Device  = Invoke-AdbCommand @("shell", "getprop ro.product.device")
     $Android = Invoke-AdbCommand @("shell", "getprop ro.build.version.release")
-    $MemInfo = Invoke-AdbCommand @("shell", "grep -E 'MemTotal|MemAvailable' /proc/meminfo")
+
+    Set-GuiProgress 55 100 "[3/5] Lendo memória RAM (/proc/meminfo)..."
+    Write-GuiLog "Lendo memória RAM disponível..."
+    $MemInfo = Invoke-AdbCommand @("shell", "cat /proc/meminfo")
+
+    Set-GuiProgress 75 100 "[4/5] Lendo armazenamento interno (/data)..."
+    Write-GuiLog "Lendo espaço livre de armazenamento..."
     $DfData  = Invoke-AdbCommand @("shell", "df -h /data")
+
+    Set-GuiProgress 90 100 "[5/5] Listando pacotes ativos..."
+    Write-GuiLog "Contando pacotes ativos no sistema..."
     $PkgsRaw = Invoke-AdbCommand @("shell", "pm list packages -e")
 
     $MemTotalMb = if ($MemInfo -match "MemTotal:\s+(\d+)") { [Math]::Round([double]$Matches[1] / 1024, 0) } else { 0 }

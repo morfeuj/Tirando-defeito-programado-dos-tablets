@@ -484,6 +484,25 @@ namespace OtimizadorTabletSamsung
 
             return await Task.Run(() =>
             {
+                // Se o servidor ADB ainda nao estiver rodando, inicia-o SEM redirecionar pipes
+                // para evitar que o processo daemon do ADB herde os handles de stdout/stderr e trave a leitura
+                if (Process.GetProcessesByName("adb").Length == 0)
+                {
+                    ProcessStartInfo psiServer = new ProcessStartInfo
+                    {
+                        FileName = adbPath,
+                        Arguments = "start-server",
+                        RedirectStandardOutput = false,
+                        RedirectStandardError = false,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+                    using (Process ps = Process.Start(psiServer))
+                    {
+                        if (ps != null) ps.WaitForExit(10000);
+                    }
+                }
+
                 ProcessStartInfo psi = new ProcessStartInfo
                 {
                     FileName = adbPath,
@@ -497,9 +516,15 @@ namespace OtimizadorTabletSamsung
                 };
                 using (Process p = Process.Start(psi))
                 {
-                    string stdout = p.StandardOutput.ReadToEnd();
-                    string stderr = p.StandardError.ReadToEnd();
-                    p.WaitForExit(120000);
+                    var outTask = p.StandardOutput.ReadToEndAsync();
+                    var errTask = p.StandardError.ReadToEndAsync();
+                    if (!p.WaitForExit(15000))
+                    {
+                        try { p.Kill(); } catch { }
+                        return "ERRO: Comando ADB excedeu o tempo limite (15s).";
+                    }
+                    string stdout = outTask.Result;
+                    string stderr = errTask.Result;
                     return (stdout + "\n" + stderr).Trim();
                 }
             });
@@ -539,18 +564,29 @@ namespace OtimizadorTabletSamsung
 
         public async Task<bool> ExecutarVarreduraAsync(bool exibirPopup = false)
         {
-            AtualizarProgresso(20, 100, "Verificando conexao com o tablet...");
+            AtualizarProgresso(15, 100, "[1/5] Verificando conexao USB com o tablet...");
+            Log("Iniciando varredura: verificando conexao USB...");
             if (!await VerificarConexaoAsync(exibirPopup))
             {
                 AtualizarProgresso(0, 100, "Tablet desconectado.");
                 return false;
             }
-            AtualizarProgresso(50, 100, "Coletando dados de hardware, RAM e pacotes...");
+            AtualizarProgresso(35, 100, "[2/5] Lendo modelo e versao do Android...");
+            Log("Conectado ao serial " + serialAtual + ". Lendo modelo e versao do Android...");
             string modelo = (await RodarAdbAsync("shell getprop ro.product.model")).Trim();
             string device = (await RodarAdbAsync("shell getprop ro.product.device")).Trim();
             string androidVer = (await RodarAdbAsync("shell getprop ro.build.version.release")).Trim();
-            string memInfo = await RodarAdbAsync("shell grep -E \"MemTotal|MemAvailable\" /proc/meminfo");
+
+            AtualizarProgresso(55, 100, "[3/5] Lendo memoria RAM (/proc/meminfo)...");
+            Log("Lendo memoria RAM disponivel...");
+            string memInfo = await RodarAdbAsync("shell cat /proc/meminfo");
+
+            AtualizarProgresso(75, 100, "[4/5] Lendo armazenamento interno (/data)...");
+            Log("Lendo espaco livre de armazenamento...");
             string dfData = await RodarAdbAsync("shell df -h /data");
+
+            AtualizarProgresso(90, 100, "[5/5] Listando pacotes ativos...");
+            Log("Contando pacotes ativos no sistema...");
             string pkgsRaw = await RodarAdbAsync("shell pm list packages -e");
 
             double memTotalMb = ExtrairKbParaMb(memInfo, "MemTotal");
